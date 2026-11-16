@@ -58,7 +58,7 @@ async def _require_runtime_capable_base(
     )
     raw = (probe.stdout or "").strip()
     if probe.returncode != 0 or not raw:
-        # An unreadable base is the clone's problem to report, not this check's.
+        # The environment creation step reports an unreadable base.
         return
     try:
         version = tuple(int(part) for part in raw.split("."))
@@ -94,7 +94,7 @@ class ProgramEnvironment:
     first is writing.
     """
 
-    def __init__(self, *, run_home: Path, conda_env_name: str, use_overlay: bool = True) -> None:
+    def __init__(self, *, run_home: Path, conda_env_name: str, use_overlay: bool) -> None:
         self._root = run_home / "program-environment"
         self._prefix = self._root / "env"
         self._use_overlay = use_overlay
@@ -105,15 +105,15 @@ class ProgramEnvironment:
 
     @property
     def python(self) -> str:
-        path = self._prefix / "bin" / "python"
+        path = self.prefix / "bin" / "python"
         if not path.is_file():
             raise AssertionError("Program environment is not prepared")
         return str(path)
 
     @property
     def prefix(self) -> Path:
-        """The run's writable prefix, without following bin/python out of a venv."""
-        return self._prefix
+        """The physical writable directory, without resolving its Python executable."""
+        return self._prefix.resolve()
 
     @property
     def read_only_prefixes(self) -> tuple[Path, ...]:
@@ -122,7 +122,8 @@ class ProgramEnvironment:
 
     @property
     def bin_paths(self) -> tuple[str, ...]:
-        return tuple(str(p / 'bin') for p in (self.prefix, *self.read_only_prefixes))
+        """Return the overlay's command directory before those of its bases."""
+        return tuple(str(p / "bin") for p in (self.prefix, *self.read_only_prefixes))
 
     async def prepare(self, remaining_s: Callable[[], float]) -> None:
         """Make this run's Program environment ready, once per process.
@@ -177,7 +178,7 @@ class ProgramEnvironment:
             return
         value = json.loads(metadata.read_text())
         if not isinstance(value, dict):
-            raise ValueError('invalid Conda overlay metadata')
+            raise ValueError("invalid Conda overlay metadata")
         base_python = await resolve_task_interpreter_or_none(
             conda_env_name=self._conda_env_name, remaining_s=remaining_s)
         base = Path(base_python).parent.resolve().parent if base_python else None
@@ -204,10 +205,10 @@ class ProgramEnvironment:
             await _require_runtime_capable_base(base_python, self._conda_env_name, remaining_s)
             marker = self._root / "overlay.creating"
             marker.touch()
-            base = await create_conda_overlay(base_python, self._prefix, remaining_s)
+            base = await create_conda_overlay(base_python, self.prefix, remaining_s)
             self._read_only_prefixes = (base,)
             temporary = self._root / "overlay.json.next"
-            with temporary.open('w') as stream:
+            with temporary.open("w") as stream:
                 stream.write(json.dumps({"schema": 1, "base_name": self._conda_env_name,
                                          "base_prefix": str(base)}) + "\n")
                 stream.flush()
@@ -233,7 +234,7 @@ class ProgramEnvironment:
                 "--channel",
                 "conda-forge",
                 "--prefix",
-                str(self._prefix),
+                str(self.prefix),
                 "python=3.11",
                 "pip",
             ]
@@ -248,7 +249,7 @@ class ProgramEnvironment:
                 "create",
                 "--yes",
                 "--prefix",
-                str(self._prefix),
+                str(self.prefix),
                 "--clone",
                 str(Path(base_python).parent.parent),
             ]

@@ -655,8 +655,8 @@ class LocalExecutor(Executor):
                 log_path=spec.log_path,
                 unit_tag=spec.unit_tag,
                 interpreter=python_path,
-                extra_env={**spec.extra_env, 'PATH': os.pathsep.join((
-                    *self._environment.bin_paths, spec.extra_env.get('PATH', os.environ.get('PATH', ''))))},
+                extra_env={**spec.extra_env, "PATH": os.pathsep.join((
+                    *self._environment.bin_paths, spec.extra_env.get("PATH", os.environ.get("PATH", ""))))},
                 require_gpu_use=spec.require_gpu_use,
             )
             outcome = await _LocalProcess().run(local_spec, remaining_s=remaining_s)

@@ -17,16 +17,24 @@ applied after writable mounts, including Setup's Conda-root grant, so a writable
 parent cannot make the base writable. As with the existing confinement, disabling
 `resources.sandbox.enable` disables filesystem mount protection.
 
-Python console entry points run through the overlay interpreter, so a run's own
-installed versions take precedence. Other base commands remain on PATH. Removing
-an inherited package does not remove it from the configured base; install a
-replacement in the overlay when needed. Setup still prepares and verifies each
-run's task, data, tests and scoring contract.
+Python console entry points use the overlay interpreter and honor `PYTHONPATH`.
+The run's own installed versions take precedence. Other base commands remain on
+`PATH`. The interpreter's `sys.prefix` points to the overlay. Packages that look
+for data in `sys.prefix/share` or `sys.prefix/etc` may not find data installed only
+in the base. For example, `jupyter kernelspec list` may omit a kernel installed
+only under the base's `share/jupyter/kernels`.
+
+Pip can uninstall packages installed in the overlay. An inherited package stays
+importable from the base after an uninstall attempt. Install the required
+replacement in the overlay when needed. Setup still verifies the task, data,
+packages and scoring contract.
 
 Resume records and validates the configured base in `program-environment/overlay.json`.
 An interrupted overlay creation is rebuilt. If a recorded base disappears or
 resolves to a different prefix, Resume reports the missing/changed base instead
-of silently discarding the run's installations. Keep the configured environment
+of silently discarding the run's installations. The run records the base path.
+Its packages remain live, so changes to that base affect all overlays, including
+a resumed run. Keep the configured environment
 available while using its runs; **no other run directory is required**. Deleting
 an older run therefore cannot remove a newer run's dependency base.
 
@@ -34,15 +42,3 @@ When `run.conda_env` is unset, the existing behavior is preserved: look for the
 environment named by `run.task_name`, clone it when available, otherwise create
 a fresh Python 3.11 environment with the owned tooling. An explicitly named base
 that does not exist also retains the existing fresh-environment fallback.
-
-## Verification
-
-```sh
-PYTHONPATH=. python scripts/verify_conda_overlay.py
-```
-
-The checks use real Python interpreters, a local wheel installation, console
-commands, and Bubblewrap mounts. They verify deletion independence, local package
-upgrades, unchanged base contents, Setup's read-only base, Resume, interpreter
-aliases and the legacy unset-configuration path. Temporary fixtures live in the
-project cache and are removed afterward.

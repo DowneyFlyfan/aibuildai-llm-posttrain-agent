@@ -45,7 +45,7 @@ The task instruction (in your system rules) names what data to expect — local 
 
 The framework already created the run's one Program environment and installed this AIBuildAI Program runtime. Its exact Python is `{{ launch.task_python }}`. Do not create, clone, or select another environment.
 
-Install, update, or remove task packages only through this exact Python. Use `PROGRAM_PYTHON="{{ launch.task_python }}"; test -x "$PROGRAM_PYTHON"; "$PROGRAM_PYTHON" -I -m pip ...` to install packages. Use `"$PROGRAM_PYTHON" -I -c "import <package>"` to check each install. Never use bare `python`, bare `pip`, `conda run`, or another environment. Do not report a package as installed until the exact-path import check works. Every later Program, and the score check at your own submission gate, runs against this same environment.
+Install or update task packages only through this exact Python. If this run uses a read-only Conda base, pip can remove only overlay packages. Uninstalling an inherited package leaves the base copy importable. Install the required replacement in the overlay when needed. Use `PROGRAM_PYTHON="{{ launch.task_python }}"; test -x "$PROGRAM_PYTHON"; "$PROGRAM_PYTHON" -I -m pip ...` to install packages. Use `"$PROGRAM_PYTHON" -I -c "import <package>"` to check each install. Never use bare `python`, bare `pip`, `conda run`, or another environment. Do not report a package as installed until the exact-path import check works. Every later Program, and the score check at your own submission gate, runs against this same environment.
 
 Pick packages from data exploration + task type + available hardware (also in your system rules), including but not limited to:
 - Vision: pytorch, torchvision, pillow, albumentations

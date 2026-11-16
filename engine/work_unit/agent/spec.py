@@ -207,7 +207,7 @@ async def _default_env(
     }
     if policy.task_environment:
         env["PATH"] = (
-            os.pathsep.join((*run_program_environment().bin_paths, os.environ.get('PATH', '')))
+            os.pathsep.join((*run_program_environment().bin_paths, os.environ.get("PATH", "")))
         )
     face_cache_root = f"{write_face}/.cache"
     # TMPDIR must stay SHORT. PyTorch DataLoader / multiprocessing bind AF_UNIX
@@ -684,7 +684,7 @@ def _sandbox_path(
         parts.append(tool_bin_dir.rstrip("/"))
     if task_env_prefix is not None:
         parts.append(f"{task_env_prefix.rstrip('/')}/bin")
-        parts.extend(str(p / 'bin') for p in run_program_environment().read_only_prefixes)
+        parts.extend(str(p / "bin") for p in run_program_environment().read_only_prefixes)
     parts.append(f"{sys.prefix.rstrip('/')}/bin")
     if SystemDir.CONDA_ROOT in (
         *policy.system_read,
